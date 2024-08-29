@@ -33,7 +33,7 @@ jobs:
 
       - task: SonarQubePrepare@6
         inputs:
-          SonarQube: 'sanarqube'  # Name of the SonarQube service connection in Azure DevOps
+          SonarQube: 'sonarqube'  # Name of the SonarQube service connection in Azure DevOps
           scannerMode: 'CLI'
           configMode: 'manual'
           cliProjectKey: '$(SONAR_PROJECT_KEY)'
