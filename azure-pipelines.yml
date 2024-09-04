@@ -15,11 +15,6 @@ variables:
   SONAR_PROJECT_VERSION: '1.0'
 
 jobs:
-  - job: SonarQubeAnalysis
-    displayName: 'SonarQube Analysis'
-    steps:
-      - checkout: self
-        fetchDepth: 0  # Disable shallow fetch for better analysis relevance
   - job: Build
     displayName: Build and Push the image to ACR
     pool:
@@ -31,6 +26,12 @@ jobs:
           repository: 'test'
           command: 'buildAndPush'
           Dockerfile: '**/Dockerfile'
+  - job: SonarQubeAnalysis
+    displayName: 'SonarQube Analysis'
+    steps:
+      - checkout: self
+        fetchDepth: 0  # Disable shallow fetch for better analysis relevance
+  
       - task: NodeTool@0
         inputs:
           versionSpec: '14.x'  # Specify your Node.js version
