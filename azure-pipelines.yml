@@ -21,8 +21,8 @@ stages:
         steps:
           - task: Docker@2
             inputs:
-              containerRegistry: 'Sumedh Docker Registry'
-              repository: 'sonarqube-azure'
+              containerRegistry: 'cai-yaml-test'
+              repository: 'test'
               command: 'buildAndPush'
               Dockerfile: '**/Dockerfile'
             displayName: 'Build and Push Docker Image'
