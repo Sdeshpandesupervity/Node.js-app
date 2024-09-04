@@ -20,7 +20,17 @@ jobs:
     steps:
       - checkout: self
         fetchDepth: 0  # Disable shallow fetch for better analysis relevance
-
+  - job: Build
+    displayName: Build and Push the image to ACR
+    pool:
+      vmImage: 'ubuntu-latest'
+    steps:
+      - task: Docker@2
+        inputs:
+          containerRegistry: 'cai-yaml-test'
+          repository: 'test'
+          command: 'buildAndPush'
+          Dockerfile: '**/Dockerfile'
       - task: NodeTool@0
         inputs:
           versionSpec: '14.x'  # Specify your Node.js version
@@ -30,7 +40,6 @@ jobs:
       - script: |
           npm install
         displayName: 'Install Dependencies'
-
       - task: SonarQubePrepare@6
         inputs:
           SonarQube: 'sonarqube'  # Name of the SonarQube service connection in Azure DevOps
