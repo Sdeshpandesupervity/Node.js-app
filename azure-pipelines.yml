@@ -3,7 +3,6 @@ trigger:
     include:
       - master
 
-
 pool:
   vmImage: 'ubuntu-latest'
 
@@ -14,52 +13,57 @@ variables:
   SONAR_PROJECT_NAME: 'test'
   SONAR_PROJECT_VERSION: '1.0'
 
-jobs:
-  - job: Build
-    displayName: Build and Push the image to ACR
-    pool:
-      vmImage: 'ubuntu-latest'
-    steps:
-      - task: Docker@2
-        inputs:
-          containerRegistry: 'cai-yaml-test'
-          repository: 'test'
-          command: 'buildAndPush'
-          Dockerfile: '**/Dockerfile'
-  - job: SonarQubeAnalysis
+stages:
+  - stage: Docker
+    displayName: 'Build and Push Docker Image'
+    jobs:
+      - job: Build
+        steps:
+          - task: Docker@2
+            inputs:
+              containerRegistry: 'Sumedh Docker Registry'
+              repository: 'sonarqube-azure'
+              command: 'buildAndPush'
+              Dockerfile: '**/Dockerfile'
+            displayName: 'Build and Push Docker Image'
+
+  - stage: SonarQubeAnalysis
     displayName: 'SonarQube Analysis'
-    steps:
-      - checkout: self
-        fetchDepth: 0  # Disable shallow fetch for better analysis relevance
-  
-      - task: NodeTool@0
-        inputs:
-          versionSpec: '14.x'  # Specify your Node.js version
-          checkLatest: true
-        displayName: 'Install Node.js'
+    jobs:
+      - job: Analyze
+        steps:
+          - checkout: self
+            fetchDepth: 0  # Disable shallow fetch for better analysis relevance
 
-      - script: |
-          npm install
-        displayName: 'Install Dependencies'
-      - task: SonarQubePrepare@6
-        inputs:
-          SonarQube: 'sonarqube'  # Name of the SonarQube service connection in Azure DevOps
-          scannerMode: 'CLI'
-          configMode: 'manual'
-          cliProjectKey: '$(SONAR_PROJECT_KEY)'
-          cliProjectName: '$(SONAR_PROJECT_NAME)'
-          cliSources: '.'
-          extraProperties: |
-            sonar.projectVersion=$(SONAR_PROJECT_VERSION)
-            sonar.host.url=$(SONARQUBE_SERVER)
-            sonar.login=$(SONARQUBE_TOKEN)
-            sonar.nodejs.version=14.x
-        displayName: 'Prepare SonarQube Analysis'
+          - task: NodeTool@0
+            inputs:
+              versionSpec: '14.x'  # Specify your Node.js version
+              checkLatest: true
+            displayName: 'Install Node.js'
 
-      - task: SonarQubeAnalyze@6
-        displayName: 'Run SonarQube Analysis'
+          - script: |
+              npm install
+            displayName: 'Install Dependencies'
 
-      - task: SonarQubePublish@6
-        inputs:
-          pollingTimeoutSec: '300'
-        displayName: 'Publish Quality Gate Result'
+          - task: SonarQubePrepare@6
+            inputs:
+              SonarQube: 'sonarqube'  # Name of the SonarQube service connection in Azure DevOps
+              scannerMode: 'CLI'
+              configMode: 'manual'
+              cliProjectKey: '$(SONAR_PROJECT_KEY)'
+              cliProjectName: '$(SONAR_PROJECT_NAME)'
+              cliSources: '.'
+              extraProperties: |
+                sonar.projectVersion=$(SONAR_PROJECT_VERSION)
+                sonar.host.url=$(SONARQUBE_SERVER)
+                sonar.login=$(SONARQUBE_TOKEN)
+                sonar.nodejs.version=14.x
+            displayName: 'Prepare SonarQube Analysis'
+
+          - task: SonarQubeAnalyze@6
+            displayName: 'Run SonarQube Analysis'
+
+          - task: SonarQubePublish@6
+            inputs:
+              pollingTimeoutSec: '300'
+            displayName: 'Publish Quality Gate Result'
