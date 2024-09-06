@@ -4,14 +4,17 @@ FROM node:14
 # Set the working directory in the container
 WORKDIR /usr/src/app
 
-# Copy package.json and package-lock.json (or yarn.lock) to the working directory
+# Copy only package.json and package-lock.json first to leverage Docker cache for dependencies
 COPY package*.json ./
 
 # Install the application dependencies
 RUN npm install
 
-# Copy the rest of the application code to the working directory
-COPY . .
+# Copy only the necessary application files (e.g., src folder) 
+COPY ./src ./src
+COPY ./public ./public
+COPY ./config ./config
+COPY app.js ./
 
 # Expose the port the app will run on
 EXPOSE 3000
