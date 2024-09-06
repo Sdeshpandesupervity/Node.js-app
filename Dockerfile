@@ -11,7 +11,7 @@ COPY package*.json ./
 RUN npm install
 
 # Copy only the necessary application files (e.g., src folder) 
-COPY ..
+COPY . .
 
 # Expose the port the app will run on
 EXPOSE 3000
