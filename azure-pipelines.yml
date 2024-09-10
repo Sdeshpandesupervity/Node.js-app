@@ -31,14 +31,9 @@ steps:
       cat sbom.json
     displayName: 'Print SBOM JSON'
 
-  # Run OWASP Dependency-Check using Azure DevOps Extension
-  - task: dependency-check@6
-    inputs:
-      projectName: 'Node.js-app'
-      scanPath: '$(Build.SourcesDirectory)'
-      outputFormat: 'ALL'
-      failOnCVSS: '7'
-      nvdApiKey: '$(NVD_API_KEY)'
+  # Run OWASP Dependency-Check using Command Line Task (as alternative)
+  - script: |
+      dependency-check --project Node.js-app --scan $(Build.SourcesDirectory) --format JSON --failOnCVSS 7 --nvdApiKey $(NVD_API_KEY) --out dependency-check-report
     displayName: 'Run OWASP Dependency-Check'
 
   # Publish OWASP Dependency-Check Report
