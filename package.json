@@ -1,0 +1,3 @@
+"devDependencies": {
+  "@cyclonedx/cyclonedx-npm": "^1.7.1"
+}
