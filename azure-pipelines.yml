@@ -1,69 +1,58 @@
-trigger:
-  branches:
-    include:
-      - master
-
 pool:
   vmImage: 'ubuntu-latest'
 
 variables:
-  SONARQUBE_SERVER: 'https://sonar-dev.supervity.ai'
-  SONARQUBE_TOKEN: 'sqa_18ca7a4a75620b175378099dc7730a1eddf2a3b6'  # Store this securely in Azure DevOps
-  SONAR_PROJECT_KEY: 'test'
-  SONAR_PROJECT_NAME: 'test'
-  SONAR_PROJECT_VERSION: '1.0'
+  NVD_API_KEY: 'b8d0a20b-f9a6-4d11-b6ab-f0df5e6b7160'
 
-stages:
-  - stage: Docker
-    displayName: 'Build and Push Docker Image'
-    jobs:
-      - job: Build
-        steps:
-          - task: Docker@2
-            inputs:
-              containerRegistry: 'cai-yaml-test'
-              repository: 'test'
-              command: 'buildAndPush'
-              Dockerfile: '**/Dockerfile'
-            displayName: 'Build and Push Docker Image'
+steps:
+  # Install Node.js
+  - task: UseNode@1
+    inputs:
+      versionSpec: '16.x'
+    displayName: 'Install Node.js'
 
-  - stage: SonarQubeAnalysis
-    displayName: 'SonarQube Analysis'
-    jobs:
-      - job: Analyze
-        steps:
-          - checkout: self
-            fetchDepth: 0  # Disable shallow fetch for better analysis relevance
+  # Install project dependencies
+  - script: |
+      npm install
+    displayName: 'Install Node.js Dependencies'
 
-          - task: NodeTool@0
-            inputs:
-              versionSpec: '14.x'  # Specify your Node.js version
-              checkLatest: true
-            displayName: 'Install Node.js'
+  # Install CycloneDX npm package
+  - script: |
+      npm install --save-dev @cyclonedx/cyclonedx-npm
+    displayName: 'Install CycloneDX'
 
-          - script: |
-              npm install
-            displayName: 'Install Dependencies'
+  # Generate SBOM using CycloneDX
+  - script: |
+      npx @cyclonedx/cyclonedx-npm --output-format JSON --output-file sbom.json
+    displayName: 'Generate SBOM using CycloneDX'
 
-          - task: SonarQubePrepare@6
-            inputs:
-              SonarQube: 'sonarqube'  # Name of the SonarQube service connection in Azure DevOps
-              scannerMode: 'CLI'
-              configMode: 'manual'
-              cliProjectKey: '$(SONAR_PROJECT_KEY)'
-              cliProjectName: '$(SONAR_PROJECT_NAME)'
-              cliSources: '.'
-              extraProperties: |
-                sonar.projectVersion=$(SONAR_PROJECT_VERSION)
-                sonar.host.url=$(SONARQUBE_SERVER)
-                sonar.login=$(SONARQUBE_TOKEN)
-                sonar.nodejs.version=14.x
-            displayName: 'Prepare SonarQube Analysis'
+  # Print the generated SBOM for verification (optional)
+  - script: |
+      cat sbom.json
+    displayName: 'Print SBOM JSON'
 
-          - task: SonarQubeAnalyze@6
-            displayName: 'Run SonarQube Analysis'
+  # Run OWASP Dependency-Check using Azure DevOps Extension
+  - task: dependency-check@6
+    inputs:
+      projectName: 'Node.js-app'
+      scanPath: '$(Build.SourcesDirectory)'
+      outputFormat: 'ALL'
+      failOnCVSS: '7'
+      nvdApiKey: '$(NVD_API_KEY)'
+    displayName: 'Run OWASP Dependency-Check'
 
-          - task: SonarQubePublish@6
-            inputs:
-              pollingTimeoutSec: '300'
-            displayName: 'Publish Quality Gate Result'
+  # Publish OWASP Dependency-Check Report
+  - task: PublishBuildArtifacts@1
+    inputs:
+      pathtoPublish: 'dependency-check-report'
+      artifactName: 'dependency-check-report'
+      publishLocation: 'Container'
+    displayName: 'Publish Dependency-Check Report'
+
+  # Publish the SBOM to Azure Storage Account or another location
+  - task: PublishBuildArtifacts@1
+    inputs:
+      pathtoPublish: 'sbom.json'
+      artifactName: 'sbom'
+      publishLocation: 'Container'
+    displayName: 'Publish SBOM'
